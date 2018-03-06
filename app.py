@@ -1,36 +1,39 @@
 
 from flask import Flask, jsonify, Response, request, abort
+from models import Student, Experience
 
 app = Flask(__name__)
 
+# Test data
+# Use List instead of database, index of list instead of prime key of table
+student1 = Student(1, 'Minghao', '', 'Hu', 'Male', 'hmh@gmail.com', 'http://pic.qqtn.com/up/2016-10/14762726301049405.jpg',
+                          'Seattle', 'Full-time', 'Fall 2016', 'Aug 2018', False)
+student2 = Student(2, 'Jay', '', 'Chou', 'Male', 'jay@gmail.com', 'http://pic.qqtn.com/up/2016-10/14762726301049405.jpg',
+                          'Boston', 'Part-time', 'Spring 2017', 'Dec 2018', True)
+studentsData = [student1, student2]
 
+experience1 = Experience(1, 'Amazon', 'Software Engineer Intern', 'Sep 2017', 'Dec 2017', 'I worked as Software Engineer Intern.')
+experience2 = Experience(2, 'Zillow', 'Data Engineer Intern', 'May 2017', 'Aug 2017', 'I worked as Data Engineer Intern.')
+experiencesData = [experience1, experience2]
+
+coursesData = ['Advanced Software Development', 'Algorithm', 'Computer System', 'Machine Learning']
+
+
+def find_experiences_by_student(student): # Simulate the process of database query
+    return experiencesData
+
+
+def find_courses_by_student(student): # Simulate the process of database query
+    return coursesData
+
+def find_students_by_params(params): # Simulate the process of database query
+    return studentsData # Just use mock data as result, didn't really search
+
+
+# APIs
 @app.route("/")
 def hello():
-    return "Hello World!"
-
-
-@app.route("/students/<int:StudentID>", methods=['GET', 'PUT'])
-def students(StudentID, **kwargs):
-    if request.method == 'GET':
-        student = Student(StudentID, 'Female', 23, 'hmh@gmail.com', 'Seattle', 'Fall 2016', 'Aug 2018', 'Information System', 'Master', 'No') # Result example
-        response = jsonify(student.serialize())
-        response.status_code = 200
-    else:
-        params = request.get_json()
-        student = Student(StudentID,
-                          params['Gender'],
-                          int(params['Age']),
-                          params['Email'],
-                          params['Campus'],
-                          params['StartTerm'],
-                          params['ExpectedGraduation'],
-                          params['Major'],
-                          params['Degree'],
-                          params['Enrollment'])
-        response = jsonify(student.serialize())
-        response.status_code = 200
-        print(student)
-    return response
+    return "Student Front End"
 
 
 @app.after_request
@@ -41,33 +44,103 @@ def after_request(response):
     return response
 
 
-class Student(object):
-    def __init__(self, StudentID, Gender, Age, Email, Campus, StartTerm, ExpectedGraduation, Major,Degree, Enrollment):
-        self.StudentID = StudentID
-        self.Gender = Gender
-        self.Age = Age
-        self.Email = Email
-        self.Campus = Campus
-        self.StartTerm = StartTerm
-        self.ExpectedGraduation = ExpectedGraduation
-        self.Major = Major
-        self.Degree = Degree
-        self.Enrollment = Enrollment
+@app.route("/students/<int:nuid>", methods=['GET', 'PUT'])
+def students_operations(nuid, **kwargs):
+    student = studentsData[nuid - 1]  # Search by index instead of search by prime key
 
-    def __repr__(self):
-        return "Student({:d}, {}, {:d}, {}, {}, {}, {}, {}, {}, {})"\
-            .format(self.StudentID, self.Gender, self.Age, self.Email, self.Campus, self.StartTerm, self.ExpectedGraduation, self.Major, self.Degree, self.Enrollment)
+    if request.method == 'GET':
+        response = jsonify(student.serialize())
+        response.status_code = 200
 
-    def serialize(self):
-        return {
-            'StudentID': self.StudentID,
-            'Gender': self.Gender,
-            'Age': self.Age,
-            'Email': self.Email,
-            'Campus': self.Campus,
-            'StartTerm': self.StartTerm,
-            'ExpectedGraduation': self.ExpectedGraduation,
-            'Major': self.Major,
-            'Degree': self.Degree,
-            'Enrollment': self.Enrollment,
-        }
+    else:
+        params = request.get_json()
+        student.firstname = params['firstname']
+        student.middlename = params['middlename']
+        student.lastname = params['lastname']
+        student.gender = params['gender']
+        student.email = params['email']
+        student.photo = params['photo']
+        student.campus = params['campus']
+        student.enrollmentstatus = params['enrollmentstatus']
+        student.startterm = params['startterm']
+        student.expectedgraduation = params['expectedgraduation']
+        student.privacy = bool(params['privacy'])
+
+        response = jsonify({"Message" : "Success"})
+        response.status_code = 200
+
+        # Print new data in console
+        print(student)
+    return response
+
+
+@app.route("/students/<int:nuid>/workexperiences", methods=['GET', 'POST'])
+def workexperiences(nuid, **kwargs):
+    student = studentsData[nuid - 1]  # Search by index instead of search by prime key
+    experiences = find_experiences_by_student(student)
+
+    if request.method == 'GET':
+        response = jsonify([experience.serialize() for experience in experiences])
+        response.status_code = 200
+
+    else:
+        params = request.get_json()
+        experience = Experience(3, # It should be auto-generated by database, just take an example here
+                          params['companyname'],
+                          params['title'],
+                          params['startdate'],
+                          params['enddate'],
+                          params['description'])
+        experiences.append(experience) # Add a new row in Experience table
+
+        response = jsonify({"Message" : "Success"})
+        response.status_code = 200
+        # Print new data in console
+        print(experience)
+    return response
+
+
+@app.route("/students/<int:nuid>/workexperiences/<int:id>", methods=['PUT', 'DELETE'])
+def workexperiences_operations(nuid, id, **kwargs):
+    student = studentsData[nuid - 1]  # Search by index instead of search by prime key
+    experiences = find_experiences_by_student(student)
+    experience = experiences[id - 1]  # Search by index instead of search by prime key
+
+    if request.method == 'DELETE':
+        experiences.remove(experience)
+        response = jsonify({"Message": "Success"})
+        response.status_code = 200
+
+    else:
+        params = request.get_json()
+        experience.companyname = params['companyname']
+        experience.title = params['title']
+        experience.startdate = params['startdate']
+        experience.enddate = params['enddate']
+        experience.description = params['description']
+
+        response = jsonify({"Message" : "Success"})
+        response.status_code = 200
+
+        # Print new data in console
+        print(experience)
+    return response
+
+
+@app.route("/students/<int:nuid>/courses", methods=['GET'])
+def courses(nuid, **kwargs):
+    student = studentsData[nuid - 1]  # Search by index instead of search by prime key
+    courses = find_courses_by_student(student)
+
+    response = jsonify({"courses" : [course for course in courses]})
+    response.status_code = 200
+    return response
+
+
+@app.route("/students", methods=['POST'])
+def search_students():
+    params = request.get_json()
+    students = find_students_by_params(params)
+    response = jsonify([student.serialize() for student in students])
+    response.status_code = 200
+    return response
